@@ -1,5 +1,8 @@
 
-# BatchEndpoint
+# BESH
+
+![BESH Logo Banner](images/BESH_LOGO_BANNER.png)
+
 
 A high-performance batch processing API for large language models with support for both single-GPU and multi-GPU (8-GPU) deployments.
 
@@ -165,6 +168,11 @@ Run individual endpoint tests + 100 calls to openai gpt-nano. We do not have a p
 # Make sure to override the OPEN_AI_KEY if you do not have an actual key in the .env
 make test TEST_API_KEY=your_key
 ```
+
+### Helper files
+
+- [`scripts/check_batch.py`](scripts/check_batch.py) – CLI check batch from ID
+- [`scripts/delete_x.py`](scripts/delete_x.py) – CLI delete files and/or Bacthes
 
 ### CI/CD
 
