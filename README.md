@@ -39,8 +39,6 @@ docker-compose -f docker-compose-8gpu.yml up -d
 docker-compose -f docker-compose-8gpu.yml ps
 ```
 
-📖 **For detailed 8-GPU setup instructions, see [README-8GPU.md](README-8GPU.md)**
-
 
 ## Tips
 
