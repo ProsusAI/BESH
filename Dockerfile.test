@@ -1,0 +1,25 @@
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies needed for building some Python packages and for curl health checks
+RUN apt-get update && apt-get install -y \
+    gcc \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy application requirements and install them
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir pytest requests
+
+# Copy the application source (including the tests directory)
+COPY . .
+
+# Environment setup
+ENV PYTHONPATH=/app
+
+# Default command will run the test-suite; can be overridden from docker-compose
+CMD ["pytest", "testing", "-v", "--color=yes"]
+
