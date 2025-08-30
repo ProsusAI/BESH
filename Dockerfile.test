@@ -22,4 +22,3 @@ ENV PYTHONPATH=/app
 
 # Default command will run the test-suite; can be overridden from docker-compose
 CMD ["pytest", "testing", "-v", "--color=yes"]
-

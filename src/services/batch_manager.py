@@ -338,7 +338,7 @@ def process_batch_with_pool(batch_id, thread_pool, app=None):
                 except Exception as e:
                     # Handle any unexpected errors from the worker function
                     results.append({
-                        "id": f"batch_req_{uuid.uuid4().hex[:8]}",
+                        "id": f"batch_req_{uuid.uuid4().hex}",
                         "custom_id": "unknown",
                         "response": None,
                         "error": {
@@ -353,7 +353,7 @@ def process_batch_with_pool(batch_id, thread_pool, app=None):
                 return
             
             # Save output file
-            output_file_id = f"file_{uuid.uuid4().hex[:8]}"
+            output_file_id = f"file_{uuid.uuid4().hex}"
             output_file_path = f"{UPLOAD_FOLDER}/{output_file_id}.jsonl"
             
             # Ensure output directory exists

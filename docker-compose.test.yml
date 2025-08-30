@@ -16,10 +16,9 @@ services:
       - SQLALCHEMY_DATABASE_URI=sqlite:////app/src/database/app_test.db
       - MODEL_NAME=openai/gpt-4.1-nano
       - OPENAI_API_BASE=https://api.openai.com/v1
-      # Provide your own key through the host env when running:  OPENAI_API_KEY=<key> docker compose -f docker-compose.test.yml up
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-dummy-key}
-      - MAX_WORKERS=20
+      - MAX_WORKERS=15
       - MAX_CONCURRENT_BATCHES=3
+      - TESTING=active
     volumes:
       - database_test_data:/app/src/database
     healthcheck:
@@ -45,7 +44,7 @@ services:
       - BASE_URL=http://batch-api:5000/v1
       - MODEL_NAME=openai/gpt-4.1-nano
       - OPENAI_API_BASE=https://api.openai.com/v1
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-dummy-key}
+      - TESTING=active
     command: ["pytest", "testing", "-v", "--color=yes"]
 
 volumes:

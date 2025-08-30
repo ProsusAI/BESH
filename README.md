@@ -17,11 +17,8 @@ A high-performance batch processing API for large language models with support f
 ### Standard Deployment (Single GPU)
 
 ```bash
-# Deploy the standard configuration
-docker compose up -d
-
-# Check service status
-docker compose ps
+# Single GPU setup with validation and health checks
+make quick-start
 
 # Access the dashboard
 curl http://localhost:5000/
@@ -32,13 +29,26 @@ curl http://localhost:5000/
 For high-throughput production workloads, use the 8-GPU configuration with load balancing:
 
 ```bash
-# Deploy the 8-GPU configuration
-docker-compose -f docker-compose-8gpu.yml up -d
-
-# Check all services
-docker-compose -f docker-compose-8gpu.yml ps
+# 8 GPU setup with validation and health checks  
+make quick-start-8gpu
 ```
 
+## Full control
+
+```bash
+# Single GPU operations
+make up          # Start services
+make down        # Stop services  
+make rebuild     # Full rebuild
+make logs        # View logs
+make health      # Check service health
+
+# 8 GPU operations
+make up-8gpu     # Start 8 GPU setup
+make down-8gpu   # Stop 8 GPU setup
+make rebuild-8gpu # Full 8 GPU rebuild
+make health-8gpu # Check 8 GPU health
+```
 
 ## Tips
 
@@ -50,6 +60,14 @@ Things you might want check:
 - `events {worker_connections 2048;}` Make sure this value is larger then MAX_WORKERS.
 - Consider uploading the model once for faster init on 8 gpus.
 - There is no storage managment system -> make sure you delete your batch files (in & out)
+
+Helpers:
+
+```bash
+make help        # Show all available commands
+make status      # Show service status
+make validate-env # Validate environment variables
+```
 
 ## 8-GPU Architecture Overview
 
@@ -144,26 +162,13 @@ curl http://localhost:5000/health
 Run individual endpoint tests + 100 calls to openai gpt-nano. We do not have a pytest for GPUs. We advise running the `test_large.py` and `test_api.py` manually to check GPU deployment. Since vLLM is openai compatible, we did not see the need for those test.
 
 ```bash
-OPENAI_API_KEY=<your-key> docker compose -f docker-compose.test.yml up --build
+# Make sure to override the OPEN_AI_KEY if you do not have an actual key in the .env
+make test TEST_API_KEY=your_key
 ```
 
+### CI/CD
 
-### Service Monitoring
-
-```bash
-# Check service status
-docker compose ps
-
-# View service logs
-docker compose logs -f
-
-# Monitor specific service
-docker compose logs -f batch-api
-```
-
-### Updates and Maintenance
-
-Only update the docker that needs change using the following pattern
+Recommended to only update the batch-api using this command for CI/CD pipelines.
 
 ```bash
 docker compose up -d --no-deps --build batch-api

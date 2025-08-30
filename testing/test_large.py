@@ -19,7 +19,7 @@ system_prompt = "You are a helpful assistant."
 
 BASE_URL = os.getenv("BASE_URL", "http://localhost:5000/v1")
 MODEL = os.getenv("MODEL_NAME", 'openai/gpt-4.1-nano')
-BATCH_COUNT = 10
+BATCH_COUNT = 15
 REQUESTS_PER_BATCH = 10
 
 

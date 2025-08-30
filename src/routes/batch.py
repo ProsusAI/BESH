@@ -1,13 +1,8 @@
 import os
 import json
 import uuid
-import threading
-import queue
-import time
 from datetime import datetime, timedelta
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Blueprint, request, jsonify, current_app
-from werkzeug.utils import secure_filename
 import litellm
 import logging
 from src.models.batch import Batch, db
@@ -80,7 +75,7 @@ def create_batch():
             }), 400
         
         # Create new batch
-        batch_id = f"batch_{uuid.uuid4().hex[:8]}"
+        batch_id = f"batch_{uuid.uuid4().hex}"
         completion_window = data.get('completion_window', '24h')
         
         # Calculate expires_at (24 hours from now)
@@ -643,11 +638,11 @@ def process_single_request(request_line, batch_id=None):
             )
             
             result = {
-                "id": f"batch_req_{uuid.uuid4().hex[:8]}",
+                "id": f"batch_req_{uuid.uuid4().hex}",
                 "custom_id": request_data['custom_id'],
                 "response": {
                     "status_code": 200,
-                    "request_id": f"req_{uuid.uuid4().hex[:8]}",
+                    "request_id": f"req_{uuid.uuid4().hex}",
                     "body": response.model_dump()
                 },
                 "error": None
@@ -675,7 +670,7 @@ def process_single_request(request_line, batch_id=None):
             
         except Exception as e:
             result = {
-                "id": f"batch_req_{uuid.uuid4().hex[:8]}",
+                "id": f"batch_req_{uuid.uuid4().hex}",
                 "custom_id": request_data['custom_id'],
                 "response": None,
                 "error": {
@@ -689,7 +684,7 @@ def process_single_request(request_line, batch_id=None):
     except Exception as e:
         # Handle JSON parsing errors
         return {
-            "id": f"batch_req_{uuid.uuid4().hex[:8]}",
+            "id": f"batch_req_{uuid.uuid4().hex}",
             "custom_id": "unknown",
             "response": None,
             "error": {

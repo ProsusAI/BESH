@@ -6,6 +6,11 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
+# Override OPENAI_API_KEY with TEST_API_KEY if set
+if os.getenv('TESTING') == 'active':
+    print(f"\n\n\nOverriding OPENAI_API_KEY with TEST_API_KEY\n\n\n")
+    os.environ['OPENAI_API_KEY'] = os.getenv('TEST_API_KEY')
+
 class Config:
     """Base configuration class"""
     

@@ -113,7 +113,7 @@ def upload_file():
             }), 400
         
         # Generate unique file ID
-        file_id = f"file_{uuid.uuid4().hex[:8]}"
+        file_id = f"file_{uuid.uuid4().hex}"
         filename = secure_filename(file.filename)
         file_path = os.path.join(UPLOAD_FOLDER, f"{file_id}.jsonl")
         
