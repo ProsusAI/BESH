@@ -5,12 +5,12 @@ A high-performance batch processing API for large language models with support f
 
 ## Features
 
-🚀 Intelligent Queue Management
-⚡ Advanced Parallel Processing
-🔄 Production-Ready Reliability
-📊 Real-Time Analytics Dashboard
-🎯 Enterprise-Scale Architecture
-💾 Persistent Storage
+🚀 Intelligent Queue Management  
+⚡ Advanced Parallel Processing  
+🔄 Production-Ready Reliability  
+📊 Real-Time Analytics Dashboard  
+🎯 Enterprise-Scale Architecture  
+💾 Persistent Storage  
 
 ## Quick Start
 
