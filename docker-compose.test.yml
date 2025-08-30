@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+
+  batch-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: batch-api-test
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=testing
+      - FLASK_APP=src/main.py
+      - PYTHONPATH=/app
+      - SQLALCHEMY_DATABASE_URI=sqlite:////app/src/database/app_test.db
+      - MODEL_NAME=openai/gpt-4.1-nano
+      - OPENAI_API_BASE=https://api.openai.com/v1
+      # Provide your own key through the host env when running:  OPENAI_API_KEY=<key> docker compose -f docker-compose.test.yml up
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-dummy-key}
+      - MAX_WORKERS=20
+      - MAX_CONCURRENT_BATCHES=3
+    volumes:
+      - database_test_data:/app/src/database
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: batch-api-e2e-tests
+    working_dir: /app
+    volumes:
+      - ./:/app:ro
+    depends_on:
+      batch-api:
+        condition: service_healthy
+    environment:
+      - PYTHONPATH=/app
+      - BASE_URL=http://batch-api:5000/v1
+      - MODEL_NAME=openai/gpt-4.1-nano
+      - OPENAI_API_BASE=https://api.openai.com/v1
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-dummy-key}
+    command: ["pytest", "testing", "-v", "--color=yes"]
+
+volumes:
+  database_test_data:

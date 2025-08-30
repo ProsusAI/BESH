@@ -1,0 +1,363 @@
+version: '3.8'
+
+services:
+  # Load balancer for distributing requests across vLLM instances
+  nginx-lb:
+    image: nginx:alpine
+    container_name: nginx-load-balancer
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./nginx-8gpu.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - vllm-gpu-0
+      - vllm-gpu-1
+      - vllm-gpu-2
+      - vllm-gpu-3
+      - vllm-gpu-4
+      - vllm-gpu-5
+      - vllm-gpu-6
+      - vllm-gpu-7
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - batch-network
+
+  # vLLM instance for GPU 0
+  vllm-gpu-0:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-gpu-0
+    platform: linux/amd64
+    ports:
+      - "8001:8000"
+    volumes:
+      - vllm_models:/root/.cache/huggingface
+
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "${MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - batch-network
+
+  # vLLM instance for GPU 1
+  vllm-gpu-1:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-gpu-1
+    platform: linux/amd64
+    ports:
+      - "8002:8000"
+    volumes:
+      - vllm_models:/root/.cache/huggingface
+
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "${MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['1']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - batch-network
+
+  # vLLM instance for GPU 2
+  vllm-gpu-2:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-gpu-2
+    platform: linux/amd64
+    ports:
+      - "8003:8000"
+    volumes:
+      - vllm_models:/root/.cache/huggingface
+
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "${MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['2']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - batch-network
+
+  # vLLM instance for GPU 3
+  vllm-gpu-3:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-gpu-3
+    platform: linux/amd64
+    ports:
+      - "8004:8000"
+    volumes:
+      - vllm_models:/root/.cache/huggingface
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "${MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['3']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - batch-network
+
+  # vLLM instance for GPU 4
+  vllm-gpu-4:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-gpu-4
+    platform: linux/amd64
+    ports:
+      - "8005:8000"
+    volumes:
+      - vllm_models:/root/.cache/huggingface
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "${MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['4']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - batch-network
+
+  # vLLM instance for GPU 5
+  vllm-gpu-5:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-gpu-5
+    platform: linux/amd64
+    ports:
+      - "8006:8000"
+    volumes:
+      - vllm_models:/root/.cache/huggingface
+
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "${MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['5']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - batch-network
+
+  # vLLM instance for GPU 6
+  vllm-gpu-6:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-gpu-6
+    platform: linux/amd64
+    ports:
+      - "8007:8000"
+    volumes:
+      - vllm_models:/root/.cache/huggingface
+
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "${MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['6']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - batch-network
+
+  # vLLM instance for GPU 7
+  vllm-gpu-7:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-gpu-7
+    platform: linux/amd64
+    ports:
+      - "8008:8000"
+    volumes:
+      - vllm_models:/root/.cache/huggingface
+
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "${MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['7']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - batch-network
+
+  # Batch API service
+  batch-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: batch-api
+    ports:
+      - "5000:5000"
+    volumes:
+      # OPTIONAL: Mount local development directory
+      # - <your_local_directory>/<repo_name>:/app
+      - database_data:/app/src/database
+      - batch_files:/tmp/batch_files
+    environment:
+      - OPENAI_API_BASE=http://nginx-lb:8000/v1
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - FLASK_ENV=production
+      - FLASK_APP=src/main.py
+      - PYTHONPATH=/app
+      - SQLALCHEMY_DATABASE_URI=sqlite:////app/src/database/app.db
+      # Increased worker limits for 8 GPU setup
+      - MAX_WORKERS=800
+      - MAX_CONCURRENT_BATCHES=8
+    depends_on:
+      nginx-lb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - batch-network
+
+networks:
+  batch-network:
+    driver: bridge
+
+volumes:
+  database_data:
+    driver: local
+  batch_files:
+    driver: local
+  vllm_models:
+    driver: local

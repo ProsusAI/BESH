@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # vLLM service for serving LLM models
+  vllm:
+
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server
+    platform: linux/amd64
+    ports:
+      - "8000:8000"
+    volumes:
+      - vllm_models:/root/.cache/huggingface
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "${MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - batch-network
+
+  # Batch API service
+  batch-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: batch-api
+    ports:
+      - "5000:5000"
+    volumes:
+      # OPTIONAL: Mount local development directory
+      # - <your_local_directory>/<repo_name>:/app
+      - database_data:/app/src/database
+      - batch_files:/tmp/batch_files
+    environment:
+      - OPENAI_API_BASE=http://vllm:8000/v1
+      - OPENAI_API_KEY=dummy-key
+      - FLASK_ENV=production
+      - FLASK_APP=src/main.py
+      - PYTHONPATH=/app
+      # Database configuration
+      - SQLALCHEMY_DATABASE_URI=sqlite:////app/src/database/app.db
+      - MAX_WORKERS=128
+      - MAX_CONCURRENT_BATCHES=10
+    depends_on:
+      vllm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - batch-network
+
+networks:
+  batch-network:
+    driver: bridge
+
+volumes:
+  database_data:
+    driver: local
+  batch_files:
+    driver: local
+  vllm_models:
+    driver: local
