@@ -36,6 +36,17 @@ For high-throughput production workloads, use the 8-GPU configuration with load 
 make quick-start-8gpu
 ```
 
+## Screenshots
+
+![BESH Dashboard Overview](images/Bashboard_overview.png)
+
+Features:
+
+- See throughput per 15min
+- See uploads per 15min
+- See stats per 24h
+- See and delete individual batches
+
 ## Full control
 
 ```bash
