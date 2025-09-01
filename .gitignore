@@ -226,8 +226,6 @@ batch_files/
 *.json.tmp
 
 # Model cache and downloads
-models/
-*.model
 *.safetensors
 .cache/
 
