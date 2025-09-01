@@ -176,8 +176,8 @@ curl http://localhost:5000/health
 Run individual endpoint tests + 100 calls to openai gpt-nano. We do not have a pytest for GPUs. We advise running the `test_large.py` and `test_api.py` manually to check GPU deployment. Since vLLM is openai compatible, we did not see the need for those test.
 
 ```bash
-# Make sure to override the OPEN_AI_KEY if you do not have an actual key in the .env
-make test TEST_API_KEY=your_key
+# Make sure to have TEST_API_KEY=<openai_api_key> if you want to use a different key for testing
+make test
 ```
 
 ### Helper files

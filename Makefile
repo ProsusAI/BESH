@@ -120,7 +120,7 @@ rebuild-8gpu: down-8gpu build-8gpu up-8gpu ## Full rebuild: stop, build, and sta
 # Testing commands
 .PHONY: test
 test: check-env ## Run tests
-	docker compose --env-file $(ENV_FILE) -f $(COMPOSE_TEST_FILE) up --build --abort-on-container-exit
+	docker compose --env-file $(ENV_FILE) -f $(COMPOSE_TEST_FILE) up --build ## --abort-on-container-exit
 	docker compose -f $(COMPOSE_TEST_FILE) down
 	@echo "${GREEN}✓ Tests completed${NC}"
 
