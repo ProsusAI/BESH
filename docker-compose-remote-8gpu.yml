@@ -1,0 +1,294 @@
+#version: '3.8'
+
+services:
+  vllm-gpu-0:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-gpu-0
+    platform: linux/amd64
+    ports:
+      - "9001:8000"
+    volumes:
+      - ${MODEL_PATH}:/models
+      - vllm_models:/root/.cache/huggingface
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "/models",
+      "--served-model-name", "${SERVED_MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+      "--api-key", "${VLLM_API_KEY}",
+      "--quantization", "fp8",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  vllm-gpu-1:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-gpu-1
+    platform: linux/amd64
+    ports:
+      - "9002:8000"
+    volumes:
+      - ${MODEL_PATH}:/models
+      - vllm_models:/root/.cache/huggingface
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "/models",
+      "--served-model-name", "${SERVED_MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+      "--api-key", "${VLLM_API_KEY}",
+      "--quantization", "fp8",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['1']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  vllm-gpu-2:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-gpu-2
+    platform: linux/amd64
+    ports:
+      - "9003:8000"
+    volumes:
+      - ${MODEL_PATH}:/models
+      - vllm_models:/root/.cache/huggingface
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "/models",
+      "--served-model-name", "${SERVED_MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+      "--api-key", "${VLLM_API_KEY}",
+      "--quantization", "fp8",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['2']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  vllm-gpu-3:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-gpu-3
+    platform: linux/amd64
+    ports:
+      - "9004:8000"
+    volumes:
+      - ${MODEL_PATH}:/models
+      - vllm_models:/root/.cache/huggingface
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "/models",
+      "--served-model-name", "${SERVED_MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+      "--api-key", "${VLLM_API_KEY}",
+      "--quantization", "fp8",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['3']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  vllm-gpu-4:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-gpu-4
+    platform: linux/amd64
+    ports:
+      - "9005:8000"
+    volumes:
+      - ${MODEL_PATH}:/models
+      - vllm_models:/root/.cache/huggingface
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "/models",
+      "--served-model-name", "${SERVED_MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+      "--api-key", "${VLLM_API_KEY}",
+      "--quantization", "fp8",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['4']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  vllm-gpu-5:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-gpu-5
+    platform: linux/amd64
+    ports:
+      - "9006:8000"
+    volumes:
+      - ${MODEL_PATH}:/models
+      - vllm_models:/root/.cache/huggingface
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "/models",
+      "--served-model-name", "${SERVED_MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+      "--api-key", "${VLLM_API_KEY}",
+      "--quantization", "fp8",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['5']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  vllm-gpu-6:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-gpu-6
+    platform: linux/amd64
+    ports:
+      - "9007:8000"
+    volumes:
+      - ${MODEL_PATH}:/models
+      - vllm_models:/root/.cache/huggingface
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "/models",
+      "--served-model-name", "${SERVED_MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+      "--api-key", "${VLLM_API_KEY}",
+      "--quantization", "fp8",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['6']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  vllm-gpu-7:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-gpu-7
+    platform: linux/amd64
+    ports:
+      - "9008:8000"
+    volumes:
+      - ${MODEL_PATH}:/models
+      - vllm_models:/root/.cache/huggingface
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+    command: [
+      "--model", "/models",
+      "--served-model-name", "${SERVED_MODEL_NAME}",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--tensor-parallel-size", "1",
+      "--max-model-len", "32000",
+      "--api-key", "${VLLM_API_KEY}",
+      "--quantization", "fp8",
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['7']
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+volumes:
+  vllm_models:
+    driver: local
