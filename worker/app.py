@@ -33,6 +33,23 @@ litellm.set_verbose = False
 os.environ['OPENAI_API_BASE'] = os.getenv('OPENAI_API_BASE', 'http://localhost:8000/v1')
 os.environ['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY', 'dummy-key')
 
+import httpx
+
+# Calculate optimal connection pool size
+MAX_WORKERS = int(os.getenv('MAX_WORKERS', '128'))
+# Connection pool should be ~1.5x MAX_WORKERS to handle request overlap
+max_connections = int(os.getenv('LITELLM_MAX_CONNECTIONS', str(MAX_WORKERS * 2)))
+max_keepalive = int(os.getenv('LITELLM_MAX_KEEPALIVE_CONNECTIONS', str(MAX_WORKERS)))
+
+litellm.client_session = httpx.AsyncClient(
+    timeout=httpx.Timeout(300.0, connect=60.0),
+    limits=httpx.Limits(
+        max_connections=max_connections,
+        max_keepalive_connections=max_keepalive
+    )
+)
+logger.info(f"Configured LiteLLM with max_connections={max_connections}, max_keepalive={max_keepalive}")
+
 REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379')
 MAX_WORKERS = int(os.getenv('MAX_WORKERS', '128'))
 MODEL_NAME = os.getenv('MODEL_NAME', '')
@@ -248,9 +265,11 @@ class FileProcessor:
 
     async def process_line(self, line: str, line_number: int, job_id: str):
         """Process individual line"""
+        custom_id = f"req_{line_number}"  # Default custom_id
         try:
             # Parse the request line (follows OpenAI batch format)
             request_data = json.loads(line)
+            custom_id = request_data.get('custom_id', custom_id)
 
             # Make the litellm call
             response = await self.make_http_call(request_data)
@@ -258,7 +277,7 @@ class FileProcessor:
             # Format result to match OpenAI batch format
             result = {
                 "id": f"batch_req_{uuid.uuid4().hex}",
-                "custom_id": request_data.get('custom_id', f"req_{line_number}"),
+                "custom_id": custom_id,
                 "response": response,
                 "error": None,
                 "usage": response.get('usage')  # Extract usage for aggregation
@@ -269,25 +288,52 @@ class FileProcessor:
         except json.JSONDecodeError as e:
             error_msg = f"Invalid JSON at line {line_number}: {e}"
             logger.error(error_msg)
-            raise Exception(error_msg)
+            # Return error result instead of raising
+            return {
+                "id": f"batch_req_{uuid.uuid4().hex}",
+                "custom_id": custom_id,
+                "response": None,
+                "error": {
+                    "code": "invalid_json",
+                    "message": error_msg
+                }
+            }
             
         except Exception as e:
             error_msg = f"Error processing line {line_number}: {e}"
             logger.error(error_msg)
-            raise Exception(error_msg)
+            # Return error result instead of raising
+            return {
+                "id": f"batch_req_{uuid.uuid4().hex}",
+                "custom_id": custom_id,
+                "response": None,
+                "error": {
+                    "code": "processing_error",
+                    "message": error_msg
+                }
+            }
 
     async def make_http_call(self, request_data: dict, retries: int = 3) -> Dict[str, Any]:
         """Make async litellm completion call with retry logic"""
         for attempt in range(retries):
             try:
                 # Extract data from request_data.body (matches OpenAI batch format)
-                body = request_data['body']
+                body = request_data['body'].copy()  # Copy to avoid modifying original
                 model = body.get('model')
                 messages = body.get('messages')
 
                 # Override model name if set
                 if MODEL_NAME:
                     model = MODEL_NAME
+                
+                # Smart max_tokens handling: Remove it to let the model decide
+                # This prevents "max_tokens too large" errors
+                # The model will generate up to its context window limit
+                if 'max_tokens' in body:
+                    #del body['max_tokens']
+                    body['max_tokens'] = 5000
+                if 'max_completion_tokens' in body:
+                    del body['max_completion_tokens']
                 
                 # Use async litellm for completion
                 if len(body) == 2:

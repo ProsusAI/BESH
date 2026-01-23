@@ -325,11 +325,13 @@ async def get_request_counts_sum(start_time: datetime, end_time: datetime) -> tu
         return result['total_batches'], result['failed_batches']
 
 async def get_lost_batches() -> List[str]:
-    """Get lost batches"""
+    """Get lost batches - only batches that were never completed"""
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch('''
-            SELECT id FROM batches WHERE status in ('validating', 'queued')
+            SELECT id FROM batches 
+            WHERE status in ('validating', 'queued')
+            AND completed_at IS NULL
         ''')
         returning_ids = [row['id'] for row in rows]
     
@@ -341,11 +343,13 @@ async def get_lost_batches() -> List[str]:
     return returning_ids
 
 async def get_lost_batches_on_start_up() -> List[str]:
-    """Get lost batches on start up"""
+    """Get lost batches on start up - only batches that were never completed"""
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch('''
-            SELECT id FROM batches WHERE status in ('validating', 'in_progress', 'queued')
+            SELECT id FROM batches 
+            WHERE status in ('validating', 'in_progress', 'queued')
+            AND completed_at IS NULL
         ''')
         returning_ids = [row['id'] for row in rows]
     
@@ -355,3 +359,61 @@ async def get_lost_batches_on_start_up() -> List[str]:
         ''', returning_ids)
     
     return returning_ids
+
+
+async def get_request_stats_by_status(start_time: datetime, end_time: datetime) -> Dict[str, Any]:
+    """Get request statistics grouped by batch status within a time range"""
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        # Get total requests for completed batches
+        completed_result = await conn.fetchrow('''
+            SELECT 
+                COALESCE(SUM(request_completed), 0) as requests_completed,
+                COALESCE(SUM(request_failed), 0) as requests_failed,
+                COALESCE(SUM(request_total), 0) as requests_total
+            FROM batches 
+            WHERE created_at >= $1 AND created_at <= $2
+            AND status = 'completed'
+        ''', start_time, end_time)
+        
+        # Get requests for in-progress batches
+        in_progress_result = await conn.fetchrow('''
+            SELECT 
+                COALESCE(SUM(request_total), 0) as requests_in_progress
+            FROM batches 
+            WHERE created_at >= $1 AND created_at <= $2
+            AND status = 'in_progress'
+        ''', start_time, end_time)
+        
+        # Get requests for pending/queued/validating batches
+        pending_result = await conn.fetchrow('''
+            SELECT 
+                COALESCE(SUM(request_total), 0) as requests_pending
+            FROM batches 
+            WHERE created_at >= $1 AND created_at <= $2
+            AND status IN ('validating', 'queued')
+        ''', start_time, end_time)
+        
+        # Get batch counts by status
+        batch_status_counts = await conn.fetch('''
+            SELECT status, COUNT(*) as count
+            FROM batches 
+            WHERE created_at >= $1 AND created_at <= $2
+            GROUP BY status
+        ''', start_time, end_time)
+        
+        status_counts = {row['status']: row['count'] for row in batch_status_counts}
+        
+        return {
+            'requests_completed': completed_result['requests_completed'],
+            'requests_failed': completed_result['requests_failed'],
+            'requests_total': completed_result['requests_total'],
+            'requests_in_progress': in_progress_result['requests_in_progress'],
+            'requests_pending': pending_result['requests_pending'],
+            'batches_by_status': status_counts,
+            'batches_completed': status_counts.get('completed', 0),
+            'batches_in_progress': status_counts.get('in_progress', 0),
+            'batches_pending': status_counts.get('validating', 0) + status_counts.get('queued', 0),
+            'batches_failed': status_counts.get('failed', 0),
+            'batches_cancelled': status_counts.get('cancelled', 0)
+        }

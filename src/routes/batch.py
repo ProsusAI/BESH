@@ -12,7 +12,7 @@ from src.models.batch import (
     init_db_pool, get_batch, create_batch, cancel_batch as db_cancel_batch,
     delete_batch as db_delete_batch, get_batches_paginated, get_batches_in_timerange,
     get_completed_batches_in_timerange, count_batches, count_batches_by_status,
-    get_batch_status_counts, get_request_counts_sum
+    get_batch_status_counts, get_request_counts_sum, get_request_stats_by_status
 )
 from src.auth import verify_api_key_flexible, verify_basic_auth
 from configs import get_config
@@ -328,34 +328,54 @@ async def list_batches(
 
 @router.get('/analytics/timeline')
 async def get_batch_timeline(
+    days: int = 7,
     user: dict = Depends(verify_basic_auth)
 ):
-    """Get batch creation analytics for the last 24 hours in 15-minute intervals"""
+    """Get batch creation analytics for the specified time range (default 7 days)"""
     try:
         from datetime import datetime, timedelta
         
-        # Calculate 24 hours ago
-        end_time = datetime.utcnow()
-        start_time = end_time - timedelta(hours=24)
+        days = min(max(days, 1), 30)  # Limit to 1-30 days
         
-        # Get batches created in the last 24 hours
+        # Calculate time range
+        end_time = datetime.utcnow()
+        start_time = end_time - timedelta(days=days)
+        
+        # Get batches created in the time range
         batches = await get_batches_in_timerange(start_time, end_time)
         
-        # Create 15-minute intervals
+        # Determine interval size based on days
+        # For 1-2 days: 15-minute intervals
+        # For 3-7 days: 1-hour intervals
+        # For 8+ days: 4-hour intervals
+        if days <= 2:
+            interval_minutes = 15
+        elif days <= 7:
+            interval_minutes = 60
+        else:
+            interval_minutes = 240
+        
+        # Create intervals
         intervals = []
         current_time = start_time
         
         while current_time < end_time:
-            interval_end = current_time + timedelta(minutes=15)
+            interval_end = current_time + timedelta(minutes=interval_minutes)
             
             # Count batches in this interval
             count = sum(1 for batch in batches 
                        if current_time <= datetime.fromtimestamp(batch['created_at']) < interval_end)
             
+            # Format label based on interval size
+            if interval_minutes <= 60:
+                label = current_time.strftime('%m/%d %H:%M')
+            else:
+                label = current_time.strftime('%m/%d %H:00')
+            
             intervals.append({
                 'timestamp': current_time.isoformat(),
                 'count': count,
-                'label': current_time.strftime('%H:%M')
+                'label': label
             })
             
             current_time = interval_end
@@ -372,6 +392,8 @@ async def get_batch_timeline(
                 'total_batches': total_batches,
                 'avg_per_interval': round(avg_per_interval, 2),
                 'max_in_interval': max_in_interval,
+                'interval_minutes': interval_minutes,
+                'days': days,
                 'time_range': {
                     'start': start_time.isoformat(),
                     'end': end_time.isoformat()
@@ -389,25 +411,39 @@ async def get_batch_timeline(
 
 @router.get('/analytics/tokens')
 async def get_token_analytics(
+    days: int = 7,
     user: dict = Depends(verify_basic_auth)
 ):
-    """Get token usage analytics for the last 24 hours in 15-minute intervals"""
+    """Get token usage analytics for the specified time range (default 7 days)"""
     try:
         from datetime import datetime, timedelta
         
-        # Calculate 24 hours ago
-        end_time = datetime.utcnow()
-        start_time = end_time - timedelta(hours=24)
+        days = min(max(days, 1), 30)  # Limit to 1-30 days
         
-        # Get completed batches in the last 24 hours
+        # Calculate time range
+        end_time = datetime.utcnow()
+        start_time = end_time - timedelta(days=days)
+        
+        # Get completed batches in the time range
         completed_batches = await get_completed_batches_in_timerange(start_time, end_time)
         
-        # Create 15-minute intervals
+        # Determine interval size based on days
+        # For 1-2 days: 15-minute intervals
+        # For 3-7 days: 1-hour intervals
+        # For 8+ days: 4-hour intervals
+        if days <= 2:
+            interval_minutes = 15
+        elif days <= 7:
+            interval_minutes = 60
+        else:
+            interval_minutes = 240
+        
+        # Create intervals
         intervals = []
         current_time = start_time
         
         while current_time < end_time:
-            interval_end = current_time + timedelta(minutes=15)
+            interval_end = current_time + timedelta(minutes=interval_minutes)
             
             # Sum tokens and duration for batches completed in this interval
             input_tokens = 0
@@ -430,6 +466,12 @@ async def get_token_analytics(
                         total_duration += duration.total_seconds()
                         batch_count += 1
             
+            # Format label based on interval size
+            if interval_minutes <= 60:
+                label = current_time.strftime('%m/%d %H:%M')
+            else:
+                label = current_time.strftime('%m/%d %H:00')
+            
             intervals.append({
                 'timestamp': current_time.isoformat(),
                 'input_tokens': input_tokens,
@@ -439,7 +481,7 @@ async def get_token_analytics(
                 'duration_seconds': total_duration,
                 'avg_duration_seconds': total_duration / batch_count if batch_count > 0 else 0,
                 'batch_count': batch_count,
-                'label': current_time.strftime('%H:%M')
+                'label': label
             })
             
             current_time = interval_end
@@ -468,6 +510,8 @@ async def get_token_analytics(
                 'total_request_completed': total_request_completed,
                 'avg_per_interval': round(avg_per_interval, 2),
                 'peak_interval': peak_interval,
+                'interval_minutes': interval_minutes,
+                'days': days,
                 'time_range': {
                     'start': start_time.isoformat(),
                     'end': end_time.isoformat()
@@ -488,6 +532,7 @@ async def get_token_analytics(
 async def get_batches_dashboard(
     page: int = 1,
     limit: int = 10,
+    days: int = 7,
     user: dict = Depends(verify_basic_auth)
 ):
     """Get dashboard view of batches with pagination, token usage, and error rates"""
@@ -496,13 +541,14 @@ async def get_batches_dashboard(
         page = max(page, 1)
         limit = min(limit, 50)  # Max 50 batches per page
         offset = (page - 1) * limit
+        days = min(max(days, 1), 30)  # Limit to 1-30 days
         
-        # Filter batches to the same 24-hour window as analytics graphs for consistency
+        # Filter batches to the specified time window (default 7 days)
         from datetime import datetime, timedelta
         end_time = datetime.utcnow()
-        start_time = end_time - timedelta(hours=24)
+        start_time = end_time - timedelta(days=days)
         
-        # Get batches from the last 24 hours
+        # Get batches from the time range
         all_batches_in_window = await get_batches_in_timerange(start_time, end_time)
         
         # Calculate pagination
@@ -571,6 +617,9 @@ async def get_batches_dashboard(
             status = batch['status']
             status_counts[status] = status_counts.get(status, 0) + 1
         
+        # Get detailed request statistics by status
+        request_stats = await get_request_stats_by_status(start_time, end_time)
+        
         # Calculate overall fail rate
         total_requests_sum, failed_requests_sum = await get_request_counts_sum(start_time, end_time)
         overall_error_rate = 0
@@ -581,13 +630,23 @@ async def get_batches_dashboard(
         summary = {
             'total_batches': total_batches,
             'batches_by_status': status_counts,
+            'batches_completed': request_stats['batches_completed'],
+            'batches_in_progress': request_stats['batches_in_progress'],
+            'batches_pending': request_stats['batches_pending'],
+            'batches_failed': request_stats['batches_failed'],
+            'batches_cancelled': request_stats['batches_cancelled'],
             'overall_error_rate_percentage': round(overall_error_rate, 2),
             'total_tokens': overall_total_tokens,
             'prompt_tokens': overall_prompt_tokens,
             'completion_tokens': overall_completion_tokens,
             'total_cost': float(overall_total_cost),
             'total_requests': overall_total_requests,
-            'total_request_completed': overall_total_request_completed
+            'total_request_completed': overall_total_request_completed,
+            'requests_completed': request_stats['requests_completed'],
+            'requests_in_progress': request_stats['requests_in_progress'],
+            'requests_pending': request_stats['requests_pending'],
+            'requests_failed': request_stats['requests_failed'],
+            'time_range_days': days
         }
         
         # Pagination info

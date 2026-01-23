@@ -667,7 +667,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <h2>Dashboard Summary</h2>
-                        <p>Overview and status breakdown of all batches in the last 24 hours</p>
+                        <p>Overview and status breakdown of all batches in the last 7 days</p>
                     </div>
                     <button onclick="loadDashboardData()" id="dashboard-refresh-btn">
                         <span class="spinner" id="dashboard-spinner" style="display: none;"></span>
@@ -691,7 +691,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <h2>Batch Creation Timeline</h2>
-                        <p>Batch creation frequency over the last 24 hours (15-minute intervals)</p>
+                        <p>Batch creation frequency over the last 7 days (1-hour intervals)</p>
                     </div>
                     <button onclick="loadAnalytics()" id="analytics-refresh-btn">
                         <span class="spinner" id="analytics-spinner" style="display: none;"></span>
@@ -712,7 +712,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <h2>Token Usage Timeline</h2>
-                        <p>Tokens processed and completion time over the last 24 hours (15-minute intervals) - Input tokens, Output tokens, and Duration stacked</p>
+                        <p>Tokens processed and completion time over the last 7 days (1-hour intervals) - Input tokens, Output tokens, and Duration stacked</p>
                     </div>
                     <button onclick="loadTokenAnalytics()" id="token-refresh-btn">
                         <span class="spinner" id="token-spinner" style="display: none;"></span>
@@ -733,7 +733,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <h2>Recent Batches</h2>
-                        <p style="color: #64748b; font-size: 0.9rem; margin-top: 5px;">Showing batches created in the last 24 hours</p>
+                        <p style="color: #64748b; font-size: 0.9rem; margin-top: 5px;">Showing batches created in the last 7 days</p>
                     </div>
                     <button onclick="loadBatches()" id="batches-refresh-btn">
                         <span class="spinner" id="batches-spinner" style="display: none;"></span>
@@ -863,7 +863,7 @@
             refreshBtn.disabled = true;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/dashboard?page=1&limit=1`);
+                const response = await fetch(`${API_BASE_URL}/dashboard?page=1&limit=1&days=7`);
                 
                 if (!response.ok) {
                     throw new Error(`Dashboard error! status: ${response.status}`);
@@ -897,7 +897,7 @@
             refreshBtn.disabled = true;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/analytics/timeline`);
+                const response = await fetch(`${API_BASE_URL}/analytics/timeline?days=7`);
                 
                 if (response.ok) {
                     const data = await response.json();
@@ -930,7 +930,7 @@
             refreshBtn.disabled = true;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/analytics/tokens`);
+                const response = await fetch(`${API_BASE_URL}/analytics/tokens?days=7`);
                 
                 if (response.ok) {
                     const data = await response.json();
@@ -963,7 +963,7 @@
             refreshBtn.disabled = true;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/dashboard?page=${page}&limit=10`);
+                const response = await fetch(`${API_BASE_URL}/dashboard?page=${page}&limit=10&days=7`);
                 
                 if (!response.ok) {
                     throw new Error(`Batches error! status: ${response.status}`);
@@ -996,30 +996,44 @@
                 <div class="summary-card">
                     <h3>Total Batches</h3>
                     <div class="value">${summary.total_batches}</div>
-                    <div class="label">Last 24 hours</div>
+                    <div class="label">Last 7 days</div>
+                    <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+                        <span class="status-item status-completed" style="font-size: 0.75rem; padding: 4px 8px;">${summary.batches_completed || 0} done</span>
+                        <span class="status-item status-processing" style="font-size: 0.75rem; padding: 4px 8px;">${summary.batches_in_progress || 0} running</span>
+                        <span class="status-item status-pending" style="font-size: 0.75rem; padding: 4px 8px;">${summary.batches_pending || 0} queued</span>
+                    </div>
                 </div>
                 
                 <div class="summary-card">
-                    <h3>Total Requests</h3>
-                    <div class="value">${summary.total_request_completed.toLocaleString()}</div>
-                    <div class="label">Last 24 hours</div>
+                    <h3>Requests Processed</h3>
+                    <div class="value">${(summary.requests_completed || 0).toLocaleString()}</div>
+                    <div class="label">Last 7 days</div>
+                    <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+                        <span class="status-item status-processing" style="font-size: 0.75rem; padding: 4px 8px;">${(summary.requests_in_progress || 0).toLocaleString()} in progress</span>
+                        <span class="status-item status-pending" style="font-size: 0.75rem; padding: 4px 8px;">${(summary.requests_pending || 0).toLocaleString()} pending</span>
+                    </div>
                 </div>
                 
                 <div class="summary-card">
                     <h3>Error Rate</h3>
                     <div class="value">${summary.overall_error_rate_percentage.toFixed(1)}%</div>
-                    <div class="label">Last 24 hours</div>
+                    <div class="label">Last 7 days</div>
+                    <div style="margin-top: 10px;">
+                        <small style="color: #64748b;">
+                            Failed: ${(summary.requests_failed || 0).toLocaleString()} requests
+                        </small>
+                    </div>
                 </div>
                 
                 <div class="summary-card">
                     <h3>Token Usage</h3>
                     <div class="detail-item">
                         <div class="detail-label">Total Tokens</div>
-                        <div class="detail-value">${summary.total_tokens.toLocaleString() || 0}</div>
+                        <div class="detail-value">${(summary.total_tokens || 0).toLocaleString()}</div>
                     </div>
                     <div style="margin-top: 10px;">
                         <small style="color: #64748b;">
-                            Prompt: ${(summary.prompt_tokens || 0).toLocaleString()}
+                            Prompt: ${(summary.prompt_tokens || 0).toLocaleString()}<br/>
                             Completion: ${(summary.completion_tokens || 0).toLocaleString()}
                         </small>
                     </div>
@@ -1035,7 +1049,7 @@
                 container.innerHTML = `
                     <div class="empty-state">
                         <h3>No status data available</h3>
-                        <p>No batch status information found for the last 24 hours.</p>
+                        <p>No batch status information found for the last 7 days.</p>
                     </div>
                 `;
                 return;
@@ -1196,7 +1210,7 @@
                 container.innerHTML = `
                     <div class="empty-state">
                         <h3>No data available</h3>
-                        <p>No batch creation data found for the last 24 hours.</p>
+                        <p>No batch creation data found for the last 7 days.</p>
                     </div>
                 `;
                 return;
@@ -1242,11 +1256,11 @@
                     </div>
                     <div class="chart-stat">
                         <div class="chart-stat-value">${summary.avg_per_interval || 0}</div>
-                        <div class="chart-stat-label">Avg per 15min</div>
+                        <div class="chart-stat-label">Avg per Interval</div>
                     </div>
                     <div class="chart-stat">
                         <div class="chart-stat-value">${summary.max_in_interval || 0}</div>
-                        <div class="chart-stat-label">Peak 15min</div>
+                        <div class="chart-stat-label">Peak Interval</div>
                     </div>
                 </div>
             `;
@@ -1272,7 +1286,7 @@
                 container.innerHTML = `
                     <div class="empty-state">
                         <h3>No data available</h3>
-                        <p>No token usage data found for the last 24 hours.</p>
+                        <p>No token usage data found for the last 7 days.</p>
                     </div>
                 `;
                 return;
@@ -1364,11 +1378,11 @@
                     </div>
                     <div class="chart-stat">
                         <div class="chart-stat-value">${(summary.avg_per_interval || 0).toLocaleString()}</div>
-                        <div class="chart-stat-label">Avg Tokens/15min</div>
+                        <div class="chart-stat-label">Avg Tokens/Interval</div>
                     </div>
                     <div class="chart-stat">
                         <div class="chart-stat-value">${(summary.peak_interval || 0).toLocaleString()}</div>
-                        <div class="chart-stat-label">Peak Tokens/15min</div>
+                        <div class="chart-stat-label">Peak Tokens/Interval</div>
                     </div>
                 </div>
             `;
