@@ -1,6 +1,29 @@
 #version: '3.8'
 
 services:
+  # LMCache server for this remote cluster (distributed KV cache sharing)
+  lmcache-server:
+    image: lmcache/lmcache-server:latest
+    container_name: lmcache-server
+    command: [
+      "--host", "0.0.0.0",
+      "--port", "6000",
+      "--chunk-size", "256",
+      "--cpu-buffer-size", "50.0",
+      "--max-workers", "8"
+    ]
+    expose:
+      - "6000"
+    networks:
+      - vllm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c 'import socket; s=socket.socket(); s.connect((\"localhost\", 6000)); s.close()'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   vllm-gpu-0:
     image: vllm/vllm-openai:latest
     container_name: vllm-server-gpu-0
@@ -21,7 +44,17 @@ services:
       "--max-model-len", "32000",
       "--api-key", "${VLLM_API_KEY}",
       "--quantization", "fp8",
+      "--kv-cache-dtype", "fp8",
+      "--gpu-memory-utilization", "0.94",
+      "--enable-chunked-prefill",
+      "--async-scheduling",
+      "--uvicorn-log-level", "warning",
+      "--max-num-batched-tokens", "49152",
+      "--max-num-seqs", "384",
+      "--kv-transfer-config", "{\"kv_connector\":\"LMCacheMPConnector\", \"kv_role\":\"kv_both\", \"kv_connector_extra_config\": {\"lmcache.mp.host\": \"lmcache-server\", \"lmcache.mp.port\": 6000}}"
     ]
+    depends_on:
+      - lmcache-server
     deploy:
       resources:
         reservations:
@@ -36,6 +69,8 @@ services:
       retries: 5
       start_period: 60s
     restart: unless-stopped
+    networks:
+      - vllm-network
 
   vllm-gpu-1:
     image: vllm/vllm-openai:latest
@@ -57,7 +92,17 @@ services:
       "--max-model-len", "32000",
       "--api-key", "${VLLM_API_KEY}",
       "--quantization", "fp8",
+      "--kv-cache-dtype", "fp8",
+      "--gpu-memory-utilization", "0.94",
+      "--enable-chunked-prefill",
+      "--async-scheduling",
+      "--uvicorn-log-level", "warning",
+      "--max-num-batched-tokens", "49152",
+      "--max-num-seqs", "384",
+      "--kv-transfer-config", "{\"kv_connector\":\"LMCacheMPConnector\", \"kv_role\":\"kv_both\", \"kv_connector_extra_config\": {\"lmcache.mp.host\": \"lmcache-server\", \"lmcache.mp.port\": 6000}}"
     ]
+    depends_on:
+      - lmcache-server
     deploy:
       resources:
         reservations:
@@ -72,6 +117,8 @@ services:
       retries: 5
       start_period: 60s
     restart: unless-stopped
+    networks:
+      - vllm-network
 
   vllm-gpu-2:
     image: vllm/vllm-openai:latest
@@ -93,7 +140,17 @@ services:
       "--max-model-len", "32000",
       "--api-key", "${VLLM_API_KEY}",
       "--quantization", "fp8",
+      "--kv-cache-dtype", "fp8",
+      "--gpu-memory-utilization", "0.94",
+      "--enable-chunked-prefill",
+      "--async-scheduling",
+      "--uvicorn-log-level", "warning",
+      "--max-num-batched-tokens", "49152",
+      "--max-num-seqs", "384",
+      "--kv-transfer-config", "{\"kv_connector\":\"LMCacheMPConnector\", \"kv_role\":\"kv_both\", \"kv_connector_extra_config\": {\"lmcache.mp.host\": \"lmcache-server\", \"lmcache.mp.port\": 6000}}"
     ]
+    depends_on:
+      - lmcache-server
     deploy:
       resources:
         reservations:
@@ -108,6 +165,8 @@ services:
       retries: 5
       start_period: 60s
     restart: unless-stopped
+    networks:
+      - vllm-network
 
   vllm-gpu-3:
     image: vllm/vllm-openai:latest
@@ -129,7 +188,17 @@ services:
       "--max-model-len", "32000",
       "--api-key", "${VLLM_API_KEY}",
       "--quantization", "fp8",
+      "--kv-cache-dtype", "fp8",
+      "--gpu-memory-utilization", "0.94",
+      "--enable-chunked-prefill",
+      "--async-scheduling",
+      "--uvicorn-log-level", "warning",
+      "--max-num-batched-tokens", "49152",
+      "--max-num-seqs", "384",
+      "--kv-transfer-config", "{\"kv_connector\":\"LMCacheMPConnector\", \"kv_role\":\"kv_both\", \"kv_connector_extra_config\": {\"lmcache.mp.host\": \"lmcache-server\", \"lmcache.mp.port\": 6000}}"
     ]
+    depends_on:
+      - lmcache-server
     deploy:
       resources:
         reservations:
@@ -144,6 +213,8 @@ services:
       retries: 5
       start_period: 60s
     restart: unless-stopped
+    networks:
+      - vllm-network
 
   vllm-gpu-4:
     image: vllm/vllm-openai:latest
@@ -165,7 +236,17 @@ services:
       "--max-model-len", "32000",
       "--api-key", "${VLLM_API_KEY}",
       "--quantization", "fp8",
+      "--kv-cache-dtype", "fp8",
+      "--gpu-memory-utilization", "0.94",
+      "--enable-chunked-prefill",
+      "--async-scheduling",
+      "--uvicorn-log-level", "warning",
+      "--max-num-batched-tokens", "49152",
+      "--max-num-seqs", "384",
+      "--kv-transfer-config", "{\"kv_connector\":\"LMCacheMPConnector\", \"kv_role\":\"kv_both\", \"kv_connector_extra_config\": {\"lmcache.mp.host\": \"lmcache-server\", \"lmcache.mp.port\": 6000}}"
     ]
+    depends_on:
+      - lmcache-server
     deploy:
       resources:
         reservations:
@@ -180,6 +261,8 @@ services:
       retries: 5
       start_period: 60s
     restart: unless-stopped
+    networks:
+      - vllm-network
 
   vllm-gpu-5:
     image: vllm/vllm-openai:latest
@@ -201,7 +284,17 @@ services:
       "--max-model-len", "32000",
       "--api-key", "${VLLM_API_KEY}",
       "--quantization", "fp8",
+      "--kv-cache-dtype", "fp8",
+      "--gpu-memory-utilization", "0.94",
+      "--enable-chunked-prefill",
+      "--async-scheduling",
+      "--uvicorn-log-level", "warning",
+      "--max-num-batched-tokens", "49152",
+      "--max-num-seqs", "384",
+      "--kv-transfer-config", "{\"kv_connector\":\"LMCacheMPConnector\", \"kv_role\":\"kv_both\", \"kv_connector_extra_config\": {\"lmcache.mp.host\": \"lmcache-server\", \"lmcache.mp.port\": 6000}}"
     ]
+    depends_on:
+      - lmcache-server
     deploy:
       resources:
         reservations:
@@ -216,6 +309,8 @@ services:
       retries: 5
       start_period: 60s
     restart: unless-stopped
+    networks:
+      - vllm-network
 
   vllm-gpu-6:
     image: vllm/vllm-openai:latest
@@ -237,7 +332,17 @@ services:
       "--max-model-len", "32000",
       "--api-key", "${VLLM_API_KEY}",
       "--quantization", "fp8",
+      "--kv-cache-dtype", "fp8",
+      "--gpu-memory-utilization", "0.94",
+      "--enable-chunked-prefill",
+      "--async-scheduling",
+      "--uvicorn-log-level", "warning",
+      "--max-num-batched-tokens", "49152",
+      "--max-num-seqs", "384",
+      "--kv-transfer-config", "{\"kv_connector\":\"LMCacheMPConnector\", \"kv_role\":\"kv_both\", \"kv_connector_extra_config\": {\"lmcache.mp.host\": \"lmcache-server\", \"lmcache.mp.port\": 6000}}"
     ]
+    depends_on:
+      - lmcache-server
     deploy:
       resources:
         reservations:
@@ -252,6 +357,8 @@ services:
       retries: 5
       start_period: 60s
     restart: unless-stopped
+    networks:
+      - vllm-network
 
   vllm-gpu-7:
     image: vllm/vllm-openai:latest
@@ -273,7 +380,17 @@ services:
       "--max-model-len", "32000",
       "--api-key", "${VLLM_API_KEY}",
       "--quantization", "fp8",
+      "--kv-cache-dtype", "fp8",
+      "--gpu-memory-utilization", "0.94",
+      "--enable-chunked-prefill",
+      "--async-scheduling",
+      "--uvicorn-log-level", "warning",
+      "--max-num-batched-tokens", "49152",
+      "--max-num-seqs", "384",
+      "--kv-transfer-config", "{\"kv_connector\":\"LMCacheMPConnector\", \"kv_role\":\"kv_both\", \"kv_connector_extra_config\": {\"lmcache.mp.host\": \"lmcache-server\", \"lmcache.mp.port\": 6000}}"
     ]
+    depends_on:
+      - lmcache-server
     deploy:
       resources:
         reservations:
@@ -288,6 +405,12 @@ services:
       retries: 5
       start_period: 60s
     restart: unless-stopped
+    networks:
+      - vllm-network
+
+networks:
+  vllm-network:
+    driver: bridge
 
 volumes:
   vllm_models:

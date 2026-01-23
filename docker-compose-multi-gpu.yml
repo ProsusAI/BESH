@@ -1,4 +1,45 @@
-version: '3.8'
+#version: '3.8'
+
+# Extension fields for reusable configuration
+x-vllm-common: &vllm-common
+  image: vllm/vllm-openai:latest
+  ipc: host
+  platform: linux/amd64
+  expose:
+    - "8000"
+  volumes:
+    - ${MODEL_PATH}:/models
+    - vllm_models:/root/.cache/huggingface
+  environment:
+    - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
+  command: [
+    "--model", "/models",
+    "--served-model-name", "${SERVED_MODEL_NAME}",
+    "--host", "0.0.0.0",
+    "--port", "8000",
+    "--tensor-parallel-size", "1",
+    "--max-model-len", "32000",
+    "--api-key", "${VLLM_API_KEY}",
+    #"--quantization", "fp8",
+    #"--kv-cache-dtype", "fp8",
+    #"--gpu-memory-utilization", "0.75",
+    #"--enable-prefix-caching",
+    #"--enable-chunked-prefill",
+    #"--async-scheduling",
+    #"--uvicorn-log-level", "warning",
+   # "--max-num-batched-tokens", "49152",
+   # "--max-num-seqs", "384",
+    "--override-generation-config", "{\"temperature\": 0.0, \"max_tokens\": 6000}",
+  ]
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+    interval: 30s
+    timeout: 10s
+    retries: 5
+    start_period: 60s
+  restart: unless-stopped
+  networks:
+    - batch-network
 
 services:
 
@@ -6,16 +47,17 @@ services:
   postgres:
     image: postgres:16
     container_name: postgres
+    command: postgres -c max_connections=1000
     environment:
-      - POSTGRES_USER=replace_with_your_username
-      - POSTGRES_PASSWORD=replace_with_your_password
-      - POSTGRES_DB=batch
+      - POSTGRES_USER=${POSTGRES_USER:-batch}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-batch}
+      - POSTGRES_DB=${POSTGRES_DB:-batch}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U replace_with_your_username -d batch"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-batch} -d ${POSTGRES_DB:-batch}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -27,7 +69,7 @@ services:
     image: redis:7-alpine
     expose:
       - "6379"
-    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     networks:
@@ -42,6 +84,10 @@ services:
   # Load balancer for distributing requests across vLLM instances
   nginx-lb:
     image: nginx:alpine
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     container_name: nginx-load-balancer
     ports:
       - "8000:8000"
@@ -84,22 +130,19 @@ services:
       - "remote2-vllm-gpu-5:${REMOTE_CLUSTER_HOST_B:-127.0.0.1}"
       - "remote2-vllm-gpu-6:${REMOTE_CLUSTER_HOST_B:-127.0.0.1}"
       - "remote2-vllm-gpu-7:${REMOTE_CLUSTER_HOST_B:-127.0.0.1}"
+      # Remote cluster C (map to REMOTE_CLUSTER_HOST_C)
+      - "remote3-vllm-gpu-0:${REMOTE_CLUSTER_HOST_C:-127.0.0.1}"
+      - "remote3-vllm-gpu-1:${REMOTE_CLUSTER_HOST_C:-127.0.0.1}"
+      - "remote3-vllm-gpu-2:${REMOTE_CLUSTER_HOST_C:-127.0.0.1}"
+      - "remote3-vllm-gpu-3:${REMOTE_CLUSTER_HOST_C:-127.0.0.1}"
+      - "remote3-vllm-gpu-4:${REMOTE_CLUSTER_HOST_C:-127.0.0.1}"
+      - "remote3-vllm-gpu-5:${REMOTE_CLUSTER_HOST_C:-127.0.0.1}"
+      - "remote3-vllm-gpu-6:${REMOTE_CLUSTER_HOST_C:-127.0.0.1}"
+      - "remote3-vllm-gpu-7:${REMOTE_CLUSTER_HOST_C:-127.0.0.1}"
 
   vllm-gpu-0:
-    image: vllm/vllm-openai:latest
+    <<: *vllm-common
     container_name: vllm-server-gpu-0
-    platform: linux/amd64
-    volumes:
-      - vllm_models:/root/.cache/huggingface
-    environment:
-      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
-    command: [
-      "--model", "${MODEL_NAME}",
-      "--host", "0.0.0.0",
-      "--port", "8000",
-      "--tensor-parallel-size", "1",
-      "--max-model-len", "32000",
-    ]
     deploy:
       resources:
         reservations:
@@ -107,33 +150,10 @@ services:
             - driver: nvidia
               device_ids: ['0']
               capabilities: [gpu]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    restart: unless-stopped
-    networks:
-      - batch-network
 
   vllm-gpu-1:
-    image: vllm/vllm-openai:latest
+    <<: *vllm-common
     container_name: vllm-server-gpu-1
-    platform: linux/amd64
-    expose:
-      - "8000"
-    volumes:
-      - vllm_models:/root/.cache/huggingface
-    environment:
-      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
-    command: [
-      "--model", "${MODEL_NAME}",
-      "--host", "0.0.0.0",
-      "--port", "8000",
-      "--tensor-parallel-size", "1",
-      "--max-model-len", "32000",
-    ]
     deploy:
       resources:
         reservations:
@@ -141,33 +161,10 @@ services:
             - driver: nvidia
               device_ids: ['1']
               capabilities: [gpu]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    restart: unless-stopped
-    networks:
-      - batch-network
 
   vllm-gpu-2:
-    image: vllm/vllm-openai:latest
+    <<: *vllm-common
     container_name: vllm-server-gpu-2
-    platform: linux/amd64
-    expose:
-      - "8000"
-    volumes:
-      - vllm_models:/root/.cache/huggingface
-    environment:
-      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
-    command: [
-      "--model", "${MODEL_NAME}",
-      "--host", "0.0.0.0",
-      "--port", "8000",
-      "--tensor-parallel-size", "1",
-      "--max-model-len", "32000",
-    ]
     deploy:
       resources:
         reservations:
@@ -175,33 +172,10 @@ services:
             - driver: nvidia
               device_ids: ['2']
               capabilities: [gpu]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    restart: unless-stopped
-    networks:
-      - batch-network
 
   vllm-gpu-3:
-    image: vllm/vllm-openai:latest
+    <<: *vllm-common
     container_name: vllm-server-gpu-3
-    platform: linux/amd64
-    expose:
-      - "8000"
-    volumes:
-      - vllm_models:/root/.cache/huggingface
-    environment:
-      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
-    command: [
-      "--model", "${MODEL_NAME}",
-      "--host", "0.0.0.0",
-      "--port", "8000",
-      "--tensor-parallel-size", "1",
-      "--max-model-len", "32000",
-    ]
     deploy:
       resources:
         reservations:
@@ -209,33 +183,10 @@ services:
             - driver: nvidia
               device_ids: ['3']
               capabilities: [gpu]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    restart: unless-stopped
-    networks:
-      - batch-network
 
   vllm-gpu-4:
-    image: vllm/vllm-openai:latest
+    <<: *vllm-common
     container_name: vllm-server-gpu-4
-    platform: linux/amd64
-    expose:
-      - "8000"
-    volumes:
-      - vllm_models:/root/.cache/huggingface
-    environment:
-      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
-    command: [
-      "--model", "${MODEL_NAME}",
-      "--host", "0.0.0.0",
-      "--port", "8000",
-      "--tensor-parallel-size", "1",
-      "--max-model-len", "32000",
-    ]
     deploy:
       resources:
         reservations:
@@ -243,33 +194,10 @@ services:
             - driver: nvidia
               device_ids: ['4']
               capabilities: [gpu]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    restart: unless-stopped
-    networks:
-      - batch-network
 
   vllm-gpu-5:
-    image: vllm/vllm-openai:latest
+    <<: *vllm-common
     container_name: vllm-server-gpu-5
-    platform: linux/amd64
-    expose:
-      - "8000"
-    volumes:
-      - vllm_models:/root/.cache/huggingface
-    environment:
-      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
-    command: [
-      "--model", "${MODEL_NAME}",
-      "--host", "0.0.0.0",
-      "--port", "8000",
-      "--tensor-parallel-size", "1",
-      "--max-model-len", "32000",
-    ]
     deploy:
       resources:
         reservations:
@@ -277,33 +205,10 @@ services:
             - driver: nvidia
               device_ids: ['5']
               capabilities: [gpu]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    restart: unless-stopped
-    networks:
-      - batch-network
 
   vllm-gpu-6:
-    image: vllm/vllm-openai:latest
+    <<: *vllm-common
     container_name: vllm-server-gpu-6
-    platform: linux/amd64
-    expose:
-      - "8000"
-    volumes:
-      - vllm_models:/root/.cache/huggingface
-    environment:
-      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
-    command: [
-      "--model", "${MODEL_NAME}",
-      "--host", "0.0.0.0",
-      "--port", "8000",
-      "--tensor-parallel-size", "1",
-      "--max-model-len", "32000",
-    ]
     deploy:
       resources:
         reservations:
@@ -311,33 +216,10 @@ services:
             - driver: nvidia
               device_ids: ['6']
               capabilities: [gpu]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    restart: unless-stopped
-    networks:
-      - batch-network
 
   vllm-gpu-7:
-    image: vllm/vllm-openai:latest
+    <<: *vllm-common
     container_name: vllm-server-gpu-7
-    platform: linux/amd64
-    expose:
-      - "8000"
-    volumes:
-      - vllm_models:/root/.cache/huggingface
-    environment:
-      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
-    command: [
-      "--model", "${MODEL_NAME}",
-      "--host", "0.0.0.0",
-      "--port", "8000",
-      "--tensor-parallel-size", "1",
-      "--max-model-len", "32000",
-    ]
     deploy:
       resources:
         reservations:
@@ -345,15 +227,6 @@ services:
             - driver: nvidia
               device_ids: ['7']
               capabilities: [gpu]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    restart: unless-stopped
-    networks:
-      - batch-network
 
   fast-api:
     build:
@@ -363,15 +236,16 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - /home/floris/BatchEndpoint:/app
+      #- /home/kinga/BatchEndpoint:/app
+      - /home/kinga/BESH:/app
       - batch_files:/tmp/batch_files
       - ./logs:/app/logs
     environment:
       - OPENAI_API_BASE=http://nginx-lb:8000/v1
-      - OPENAI_API_KEY=dummy-key
+      - OPENAI_API_KEY=${VLLM_API_KEY}
       - UPLOAD_FOLDER=/tmp/batch_files
       - PYTHONPATH=/app
-      - SQLALCHEMY_DATABASE_URI=postgresql+psycopg://batch:batch@postgres:5432/batch
+      - SQLALCHEMY_DATABASE_URI=postgresql+psycopg://${POSTGRES_USER:-batch}:${POSTGRES_PASSWORD:-batch}@postgres:5432/${POSTGRES_DB:-batch}
       - REDIS_URL=redis://redis:6379
       - DB_POOL_SIZE=20
       - DB_MAX_OVERFLOW=200
@@ -402,11 +276,13 @@ services:
       - PYTHONPATH=/app
       - UPLOAD_FOLDER=/tmp/batch_files
       - OPENAI_API_BASE=http://nginx-lb:8000/v1
-      - SQLALCHEMY_DATABASE_URI=postgresql+psycopg://replace_with_your_username:replace_with_your_password@postgres:5432/batch
+      - OPENAI_API_KEY=${VLLM_API_KEY}
+      - SQLALCHEMY_DATABASE_URI=postgresql+psycopg://${POSTGRES_USER:-batch}:${POSTGRES_PASSWORD:-batch}@postgres:5432/${POSTGRES_DB:-batch}
       - REDIS_URL=redis://redis:6379
-      - MAX_WORKERS=64
-      - LITELLM_MAX_CONNECTIONS=256
-      - LITELLM_MAX_KEEPALIVE_CONNECTIONS=256
+      - MAX_WORKERS=${MAX_WORKERS:-64}
+      - WORKER_COUNT=${WORKER_COUNT:-8}
+      - LITELLM_MAX_CONNECTIONS=${LITELLM_MAX_CONNECTIONS:-256}
+      - LITELLM_MAX_KEEPALIVE_CONNECTIONS=${LITELLM_MAX_KEEPALIVE_CONNECTIONS:-256}
       - DB_POOL_SIZE=10
       - DB_MAX_OVERFLOW=50
       - WORKER_CONCURRENCY=16
