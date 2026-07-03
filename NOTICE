@@ -1,0 +1,52 @@
+BESH
+Copyright © 2025 MIH AI B.V.
+
+This product is licensed under the Apache License, Version 2.0.
+
+This software includes third-party open source software components.
+The following is a list of these components with their respective licenses.
+
+================================================================================
+THIRD-PARTY DEPENDENCIES
+================================================================================
+
+Weak-copyleft components (LGPL / MPL) — use reviewed and approved by Prosus Legal:
+--------------------------------------------------------------------------------
+Component: psycopg (psycopg3)   License: LGPL-3.0        Source: https://github.com/psycopg/psycopg
+Component: certifi              License: MPL-2.0         Source: https://github.com/certifi/python-certifi
+Component: tqdm                 License: MPL-2.0 / MIT   Source: https://github.com/tqdm/tqdm
+
+Permissive components (Apache-2.0 / MIT / BSD / ISC):
+--------------------------------------------------------------------------------
+Component: FastAPI              License: MIT             Source: https://github.com/fastapi/fastapi
+Component: Uvicorn              License: BSD-3-Clause    Source: https://github.com/encode/uvicorn
+Component: Starlette            License: BSD-3-Clause    Source: https://github.com/encode/starlette
+Component: Pydantic             License: MIT             Source: https://github.com/pydantic/pydantic
+Component: SQLAlchemy           License: MIT             Source: https://github.com/sqlalchemy/sqlalchemy
+Component: asyncpg              License: Apache-2.0      Source: https://github.com/MagicStack/asyncpg
+Component: redis-py             License: MIT             Source: https://github.com/redis/redis-py
+Component: LiteLLM              License: MIT             Source: https://github.com/BerriAI/litellm
+Component: OpenAI Python        License: Apache-2.0      Source: https://github.com/openai/openai-python
+Component: huggingface-hub      License: Apache-2.0      Source: https://github.com/huggingface/huggingface_hub
+Component: tokenizers           License: Apache-2.0      Source: https://github.com/huggingface/tokenizers
+Component: tiktoken             License: MIT             Source: https://github.com/openai/tiktoken
+Component: requests             License: Apache-2.0      Source: https://github.com/psf/requests
+Component: urllib3              License: MIT             Source: https://github.com/urllib3/urllib3
+Component: aiohttp              License: Apache-2.0      Source: https://github.com/aio-libs/aiohttp
+Component: httpx                License: BSD-3-Clause    Source: https://github.com/encode/httpx
+Component: Jinja2               License: BSD-3-Clause    Source: https://github.com/pallets/jinja
+Component: MarkupSafe           License: BSD-3-Clause    Source: https://github.com/pallets/markupsafe
+Component: Werkzeug             License: BSD-3-Clause    Source: https://github.com/pallets/werkzeug
+Component: click                License: BSD-3-Clause    Source: https://github.com/pallets/click
+Component: itsdangerous         License: BSD-3-Clause    Source: https://github.com/pallets/itsdangerous
+Component: blinker              License: MIT             Source: https://github.com/pallets-eco/blinker
+Component: PyYAML               License: MIT             Source: https://github.com/yaml/pyyaml
+Component: orjson               License: Apache-2.0 / MIT Source: https://github.com/ijl/orjson
+Component: python-multipart     License: Apache-2.0      Source: https://github.com/Kludex/python-multipart
+Component: python-dotenv        License: BSD-3-Clause    Source: https://github.com/theskumar/python-dotenv
+Component: anyio               License: MIT             Source: https://github.com/agronholm/anyio
+Component: certifi's peers (idna, sniffio, h11, httpcore, etc.) License: MIT / BSD
+
+For complete license texts, see the LICENSE files in the respective dependencies
+or visit the source repositories. This list covers the primary declared
+dependencies; transitive dependencies inherit compatible permissive licenses.
